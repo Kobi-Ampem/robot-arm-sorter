@@ -27,3 +27,19 @@ Real bugs (symptom, root cause, fix, lesson) and failed ideas (with numbers), ne
   test checks that the low, close case is reported as a joint-limit failure.
 - **Lesson.** Elbow-up is the only practical branch for picking from the table; elbow-down stays
   as an option but should not be the default.
+
+## 24 Nov 2026: damped least squares IK from a fixed start pose (failed idea)
+
+- **Idea.** Start the numerical solver from one fixed ready pose (base facing +x, gripper
+  pointing down) for every target.
+- **Numbers.** On 1,000 random top-down targets spread all around the base (seed 4, damping 0.05,
+  200 iterations, tolerance 1e-6 m and 1e-6 rad): 129 converged, median iterations 200 (the cap).
+  For targets behind the arm, the solver bent the shoulder back over the base instead of turning
+  the base, and stalled with joints at their limits.
+- **What replaced it.** Turn the base to face the target in the start pose (one atan2): 956 of
+  1,000 converged, median 14 iterations. None of the 44 left were at a joint limit; they converge
+  slowly (median error 48 micrometres after 200 iterations), and all lie outside the pick area
+  (radius 0.15 to 0.38 m, shoulder at 0.03 to 1.21 rad). All 228 targets inside the pick area
+  (radius 0.15 to 0.35 m, height up to 0.15 m) converged.
+- **Lesson.** For a local solver the seed matters as much as the update rule; use what is known in
+  closed form (here, the base yaw) to start it in the right basin.

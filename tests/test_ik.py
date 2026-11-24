@@ -1,24 +1,9 @@
 import numpy as np
 import pytest
 
-from arm_sorter.ik import TOP_DOWN, solve_closed_form, within_limits
-from arm_sorter.kinematics import JOINT_LIMITS, L2, L3, tcp_pose
-
-
-def top_down_configs(n, seed=0):
-    """Random elbow-up configurations within limits whose tool points straight down above the
-    table and in front of the base. Configurations with the tool behind the base (shoulder tipped
-    past vertical) have a second, equivalent solution with the base turned by 180 degrees, which
-    is the one the solver returns."""
-    rng = np.random.default_rng(seed)
-    configs = []
-    while len(configs) < n:
-        q = rng.uniform(JOINT_LIMITS[:, 0], JOINT_LIMITS[:, 1])
-        q[3] = TOP_DOWN - q[1] - q[2]
-        radial = L2 * np.cos(q[1]) + L3 * np.cos(q[1] + q[2])  # tool reach in the arm's plane
-        if within_limits(q) and tcp_pose(q)[2, 3] > 0.0 and q[2] < 0 and radial > 0:
-            configs.append(q)
-    return np.array(configs)
+from arm_sorter.ik import READY_POSE, TOP_DOWN, solve_closed_form, solve_dls
+from arm_sorter.kinematics import tcp_pose
+from arm_sorter.workspace import sample_top_down_configs as top_down_configs
 
 
 def pitch_of(pose):
@@ -66,3 +51,28 @@ def test_elbow_down_also_reaches():
 def test_out_of_reach():
     result = solve_closed_form([1.0, 0.0, 0.05])
     assert not result.ok and result.reason == "out of reach"
+
+
+def test_ready_pose_points_down():
+    assert pitch_of(tcp_pose(READY_POSE)) == pytest.approx(TOP_DOWN, abs=1e-12)
+
+
+def in_pick_area(target):
+    return 0.15 <= np.hypot(target[0], target[1]) <= 0.35 and target[2] <= 0.15
+
+
+def test_dls_reaches_targets_in_the_pick_area():
+    targets = [tcp_pose(q)[:3, 3] for q in top_down_configs(400, seed=4)]
+    targets = [t for t in targets if in_pick_area(t)]
+    assert len(targets) > 50
+    for target in targets:
+        result = solve_dls(target)
+        assert result.ok, (target, result)
+        pose = tcp_pose(result.q)
+        assert pose[:3, 3] == pytest.approx(target, abs=1e-6)
+        assert pitch_of(pose) == pytest.approx(TOP_DOWN, abs=1e-5)
+
+
+def test_dls_reports_unreachable_target():
+    result = solve_dls([1.0, 0.0, 0.05])
+    assert not result.ok and result.reason == "did not converge"
