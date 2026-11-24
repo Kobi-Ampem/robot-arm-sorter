@@ -58,3 +58,19 @@ def tcp_pose(q) -> np.ndarray:
 
 def tcp_position(q) -> np.ndarray:
     return tcp_pose(q)[:3, 3]
+
+
+def jacobian(q) -> np.ndarray:
+    """Geometric Jacobian of the tool point, 6 x 4: rows are linear then angular velocity.
+
+    Every joint is revolute, so column i is [z_i x (p_tcp - p_i); z_i], with z_i and p_i the
+    axis and origin of DH frame i (the frame joint i+1 turns about).
+    """
+    frames = joint_frames(q)
+    p_tcp = frames[-1][:3, 3]
+    J = np.zeros((6, 4))
+    for i in range(4):
+        z, p = frames[i][:3, 2], frames[i][:3, 3]
+        J[:3, i] = np.cross(z, p_tcp - p)
+        J[3:, i] = z
+    return J

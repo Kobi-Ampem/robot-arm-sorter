@@ -2,8 +2,8 @@ import mujoco
 import numpy as np
 import pytest
 
-from arm_sorter.kinematics import D1, JOINT_LIMITS, L2, L3, L4, joint_frames
-from arm_sorter.model import ARM_JOINTS, arm_qpos_indices, load_model
+from arm_sorter.kinematics import D1, JOINT_LIMITS, L2, L3, L4, jacobian, joint_frames
+from arm_sorter.model import ARM_JOINTS, arm_dof_indices, arm_qpos_indices, load_model
 
 
 @pytest.fixture(scope="module")
@@ -57,3 +57,28 @@ def test_dh_z_axes_are_the_joint_axes(model):
         for i, name in enumerate(ARM_JOINTS):
             # In DH, joint i+1 turns about the z axis of frame i.
             assert frames[i][:3, 2] == pytest.approx(data.joint(name).xaxis, abs=1e-9)
+
+
+def test_jacobian_matches_mujoco(model):
+    dofs = arm_dof_indices(model)
+    for q in random_configs(200, seed=2):
+        data = mujoco_kinematics(model, q)
+        mujoco.mj_comPos(model, data)  # mj_jacSite needs the spatial quantities from this
+        jacp = np.zeros((3, model.nv))
+        jacr = np.zeros((3, model.nv))
+        mujoco.mj_jacSite(model, data, jacp, jacr, model.site("tcp").id)
+        J = jacobian(q)
+        assert J[:3] == pytest.approx(jacp[:, dofs], abs=1e-9)
+        assert J[3:] == pytest.approx(jacr[:, dofs], abs=1e-9)
+
+
+def test_jacobian_matches_finite_differences():
+    from arm_sorter.kinematics import tcp_position
+
+    eps = 1e-6
+    for q in random_configs(50, seed=3):
+        numeric = np.column_stack([
+            (tcp_position(q + eps * e) - tcp_position(q - eps * e)) / (2 * eps)
+            for e in np.eye(4)
+        ])
+        assert jacobian(q)[:3] == pytest.approx(numeric, abs=1e-7)
