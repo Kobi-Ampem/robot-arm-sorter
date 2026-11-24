@@ -1,0 +1,77 @@
+<!--
+  Four-joint arm with a two-finger gripper, sized like a hobby-servo arm.
+  Joint axes are chosen so MuJoCo's joint angles equal the DH angles in kinematics.py:
+  base_yaw turns about +z; shoulder, elbow and wrist turn about -y, so a positive angle lifts
+  the link. In the zero pose the arm points straight out along +x.
+-->
+<mujoco model="arm_sorter">
+  <compiler angle="radian" autolimits="true"/>
+  <option timestep="0.002" integrator="implicitfast"/>
+
+  <default>
+    <joint damping="0.05" armature="0.01"/>
+    <geom density="1000" rgba="0.75 0.75 0.78 1"/>
+    <default class="finger">
+      <geom type="box" size="0.02 0.005 0.012" friction="1.5 0.02 0.002" rgba="0.2 0.2 0.22 1"/>
+      <joint type="slide" range="0 0.04" damping="0.5" armature="0"/>
+    </default>
+  </default>
+
+  <asset>
+    <texture name="wood" type="2d" builtin="flat" rgb1="0.55 0.42 0.3" width="64" height="64"/>
+    <material name="table" texture="wood"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0.2 0 1.2" dir="0 0 -1" diffuse="0.9 0.9 0.9"/>
+    <!-- Table top surface at z = 0. -->
+    <geom name="table" type="box" size="0.45 0.45 0.02" pos="0.15 0 -0.02" material="table"/>
+    <!-- Looks straight down at the pick area: image up is +x, image right is -y. -->
+    <camera name="overhead" pos="0.25 0 0.8" xyaxes="0 -1 0 1 0 0" fovy="50"/>
+
+    <body name="base">
+      <geom name="base" type="cylinder" size="0.06 0.01" pos="0 0 0.01" rgba="0.3 0.3 0.32 1"/>
+      <body name="turret">
+        <joint name="base_yaw" axis="0 0 1" range="-3.1416 3.1416"/>
+        <geom type="cylinder" size="0.035 0.045" pos="0 0 0.055"/>
+        <body name="upper_arm" pos="0 0 0.10">
+          <joint name="shoulder" axis="0 -1 0" range="-0.5 3.0"/>
+          <geom type="capsule" fromto="0 0 0 0.20 0 0" size="0.018"/>
+          <body name="forearm" pos="0.20 0 0">
+            <joint name="elbow" axis="0 -1 0" range="-2.7 2.7"/>
+            <geom type="capsule" fromto="0 0 0 0.18 0 0" size="0.015"/>
+            <body name="hand" pos="0.18 0 0">
+              <joint name="wrist" axis="0 -1 0" range="-2.7 2.7"/>
+              <geom name="palm" type="box" size="0.03 0.05 0.012" pos="0.03 0 0"/>
+              <!-- Tool centre point: the middle of the grasp, between the fingertips. -->
+              <site name="tcp" pos="0.10 0 0" size="0.005" rgba="1 0 0 1"/>
+              <body name="finger_left" pos="0.09 0.005 0">
+                <joint name="finger_left" class="finger" axis="0 1 0"/>
+                <geom class="finger"/>
+              </body>
+              <body name="finger_right" pos="0.09 -0.005 0">
+                <joint name="finger_right" class="finger" axis="0 -1 0"/>
+                <geom class="finger"/>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <equality>
+    <!-- The two fingers move together, like a single-servo parallel gripper. -->
+    <joint joint1="finger_right" joint2="finger_left" polycoef="0 1 0 0 0"/>
+  </equality>
+
+  <actuator>
+    <!-- Torque motors (N m), limited to hobby-servo levels; our own controller drives them. -->
+    <motor name="base_yaw" joint="base_yaw" ctrlrange="-2 2"/>
+    <motor name="shoulder" joint="shoulder" ctrlrange="-4 4"/>
+    <motor name="elbow" joint="elbow" ctrlrange="-3 3"/>
+    <motor name="wrist" joint="wrist" ctrlrange="-1.5 1.5"/>
+    <!-- Opening per finger in metres; 0 is closed. -->
+    <position name="gripper" joint="finger_left" kp="200" ctrlrange="0 0.04"/>
+  </actuator>
+</mujoco>
