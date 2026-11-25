@@ -43,3 +43,23 @@ Real bugs (symptom, root cause, fix, lesson) and failed ideas (with numbers), ne
   (radius 0.15 to 0.35 m, height up to 0.15 m) converged.
 - **Lesson.** For a local solver the seed matters as much as the update rule; use what is known in
   closed form (here, the base yaw) to start it in the right basin.
+
+## 24 Nov 2026: the base joint would not turn
+
+- **Symptom.** The first PID tracking test moved the arm from the ready pose to a target 0.38 rad
+  round the base. The base finished 0.36 rad short with its motor saturated at the 2 N m limit,
+  although no gravity acts on a vertical axis.
+- **Root cause.** `data.contact` showed four contacts between the `base` and `turret` bodies at
+  10 mm depth. The base body has no joint, so MuJoCo welds it to the world, and the rule that
+  ignores contacts between a body and its parent does not apply to a parent welded to the world.
+  The turret cylinder (z 0.01 to 0.10) overlapped the base plate (top at z 0.02), so friction
+  fought every base rotation. The closed fingers also touched each other (four more contacts).
+- **Fix.** The turret geometry now starts at z 0.02 (no overlap), and the model excludes
+  base-turret and finger-finger contacts explicitly. New tests: no contacts at rest in free space,
+  and the base turns more than 0.5 rad in 0.5 s under 0.2 N m with gravity off. Under that test,
+  the base turned 0.0097 rad before the fix and 0.789 rad after. (The first version of the test
+  left gravity on; with no controller the arm fell onto the table and table friction slowed the
+  base, so the test measured the wrong thing.) The PID test move then tracked the base to
+  0.0014 rad RMS error instead of finishing 0.36 rad short.
+- **Lesson.** After building a model, check `ncon` at rest before tuning anything; a controller
+  will happily "work" against a hidden contact, and the symptom looks like a tuning problem.

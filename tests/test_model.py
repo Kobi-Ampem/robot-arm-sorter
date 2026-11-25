@@ -32,3 +32,24 @@ def test_fingers_move_together():
     right = data.joint("finger_right").qpos[0]
     assert abs(left - 0.03) < 2e-3
     assert abs(left - right) < 1e-3
+
+
+def test_no_contacts_at_rest_in_free_space():
+    from arm_sorter.ik import READY_POSE
+
+    model = load_model()
+    data = mujoco.MjData(model)
+    data.qpos[:4] = READY_POSE
+    mujoco.mj_forward(model, data)
+    assert data.ncon == 0
+
+
+def test_base_turns_freely():
+    model = load_model()
+    model.opt.gravity[:] = 0  # without a controller the arm would fall onto the table
+    data = mujoco.MjData(model)
+    data.qpos[:4] = [0, 1.2, -1.8, -0.97]
+    data.ctrl[model.actuator("base_yaw").id] = 0.2
+    for _ in range(250):  # 0.5 s
+        mujoco.mj_step(model, data)
+    assert data.joint("base_yaw").qpos[0] > 0.5

@@ -33,7 +33,7 @@
       <geom name="base" type="cylinder" size="0.06 0.01" pos="0 0 0.01" rgba="0.3 0.3 0.32 1"/>
       <body name="turret">
         <joint name="base_yaw" axis="0 0 1" range="-3.1416 3.1416"/>
-        <geom type="cylinder" size="0.035 0.045" pos="0 0 0.055"/>
+        <geom type="cylinder" size="0.035 0.04" pos="0 0 0.06"/>
         <body name="upper_arm" pos="0 0 0.10">
           <joint name="shoulder" axis="0 -1 0" range="-0.5 3.0"/>
           <geom type="capsule" fromto="0 0 0 0.20 0 0" size="0.018"/>
@@ -59,6 +59,15 @@
       </body>
     </body>
   </worldbody>
+
+  <contact>
+    <!-- The base has no joint, so MuJoCo welds it to the world, and its rule of ignoring
+         contacts between a body and its parent does not cover base and turret. Without this,
+         the turret rubs on the base plate and resists every base rotation (docs/LOG.md). -->
+    <exclude body1="base" body2="turret"/>
+    <!-- Coupled fingers touch each other when closed; that contact does nothing useful. -->
+    <exclude body1="finger_left" body2="finger_right"/>
+  </contact>
 
   <equality>
     <!-- The two fingers move together, like a single-servo parallel gripper. -->
