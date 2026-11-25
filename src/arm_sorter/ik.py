@@ -67,7 +67,7 @@ def tool_direction(target, pitch: float) -> np.ndarray:
     return np.array([np.cos(pitch) * np.cos(yaw), np.cos(pitch) * np.sin(yaw), np.sin(pitch)])
 
 
-def solve_dls(target, pitch: float = TOP_DOWN, q0=None, damping: float = 0.05,
+def solve_dls(target, pitch: float = TOP_DOWN, q0=None, damping: float = 0.01,
               max_iter: int = 200, tol: float = 1e-6, max_step: float = 0.2) -> IKResult:
     """Numerical IK by damped least squares (Levenberg-Marquardt style).
 
@@ -75,6 +75,8 @@ def solve_dls(target, pitch: float = TOP_DOWN, q0=None, damping: float = 0.05,
     rotation that would turn the gripper's x axis onto the wanted direction (x cross d). The
     damping term keeps steps bounded near singularities, at the cost of slower convergence:
         dq = J^T (J J^T + damping^2 I)^-1 e
+    The default damping of 0.01 comes from the sweep in experiments/RESULTS.md (24 Nov 2026).
+    It does not settle on unreachable targets; callers must check `ok`.
     Steps are capped at max_step radians and joints are clipped to their limits.
 
     With no q0, it starts from READY_POSE with the base already turned to face the target.
