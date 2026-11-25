@@ -1,0 +1,26 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    env:
+      # No GPU on the runner: render with Mesa's software OpenGL.
+      MUJOCO_GL: osmesa
+      PYOPENGL_PLATFORM: osmesa
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install software OpenGL
+        run: sudo apt-get update && sudo apt-get install -y libosmesa6
+      - name: Install the package
+        run: pip install -e ".[dev]"
+      - name: Run the tests
+        run: pytest -q
