@@ -41,3 +41,27 @@ def test_anti_windup_stops_integrating_when_saturated(model):
     for _ in range(50):
         controller.torque(data, far, np.zeros(4))
     assert controller.integral[0] == 0.0
+
+
+def test_gravity_torque_matches_mujoco_at_rest(model):
+    import mujoco
+
+    from arm_sorter.control import GravityCompensatedPID
+
+    controller = GravityCompensatedPID(model)
+    data = start_at(model, READY_POSE)  # at rest, so the bias force is gravity alone
+    assert controller.gravity_torque(data) == pytest.approx(data.qfrc_bias[:4], abs=1e-12)
+
+
+def test_gravity_compensation_removes_the_sag(model):
+    from arm_sorter.control import GravityCompensatedPID
+
+    q1 = solve_closed_form([0.30, 0.12, 0.05]).q
+    traj = joint_move(READY_POSE, q1, model.opt.timestep)
+    from arm_sorter.control import pd_gains
+
+    pd = pd_gains(25, 1.0)  # no integral term, so only gravity compensation removes the sag
+    plain = track(model, start_at(model, READY_POSE), traj, JointPID(model, pd))
+    comp = track(model, start_at(model, READY_POSE), traj, GravityCompensatedPID(model, pd))
+    assert comp.final_error().max() < 1e-3
+    assert comp.rms_error().max() < plain.rms_error().max() / 3

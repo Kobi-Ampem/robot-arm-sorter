@@ -6,24 +6,26 @@
 -->
 <mujoco model="arm_sorter">
   <compiler angle="radian" autolimits="true"/>
-  <option timestep="0.002" integrator="implicitfast"/>
+  <!-- Elliptic friction cones and impratio 10 stop a held object slipping out of the fingers,
+       as MuJoCo's documentation recommends for grasping (sweep in experiments/RESULTS.md). -->
+  <option timestep="0.002" integrator="implicitfast" cone="elliptic" impratio="10"/>
 
   <default>
     <joint damping="0.05" armature="0.01"/>
     <geom density="1000" rgba="0.75 0.75 0.78 1"/>
     <default class="finger">
-      <geom type="box" size="0.02 0.005 0.012" friction="1.5 0.02 0.002" rgba="0.2 0.2 0.22 1"/>
+      <geom type="box" size="0.02 0.005 0.012" friction="1.5 0.02 0.002" solref="0.004 1" solimp="0.95 0.99 0.001" rgba="0.2 0.2 0.22 1"/>
       <joint type="slide" range="0 0.04" damping="0.5" armature="0"/>
     </default>
   </default>
 
   <asset>
-    <texture name="wood" type="2d" builtin="flat" rgb1="0.55 0.42 0.3" width="64" height="64"/>
-    <material name="table" texture="wood"/>
+    <!-- A grey sorting tray: a brown wood colour sits at the same hue as a turning tomato. -->
+    <material name="table" rgba="0.62 0.63 0.65 1"/>
   </asset>
 
   <worldbody>
-    <light pos="0.2 0 1.2" dir="0 0 -1" diffuse="0.9 0.9 0.9"/>
+    <light name="top" pos="0.2 0 1.2" dir="0 0 -1" diffuse="0.9 0.9 0.9"/>
     <!-- Table top surface at z = 0. -->
     <geom name="table" type="box" size="0.45 0.45 0.02" pos="0.15 0 -0.02" material="table"/>
     <!-- Looks straight down at the pick area: image up is +x, image right is -y. -->
@@ -71,7 +73,7 @@
 
   <equality>
     <!-- The two fingers move together, like a single-servo parallel gripper. -->
-    <joint joint1="finger_right" joint2="finger_left" polycoef="0 1 0 0 0"/>
+    <joint joint1="finger_right" joint2="finger_left" polycoef="0 1 0 0 0" solref="0.004 1"/>
   </equality>
 
   <actuator>
