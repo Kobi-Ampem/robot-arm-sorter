@@ -58,3 +58,29 @@ class JointPID:
 
     def apply(self, data: mujoco.MjData, q_ref, qd_ref):
         data.ctrl[self.act_idx] = self.torque(data, q_ref, qd_ref)
+
+
+class GravityCompensatedPID(JointPID):
+    """PID plus the torque that exactly holds the arm still against gravity at its current pose.
+
+    The gravity torque g(q) comes from MuJoCo's inverse dynamics (mj_rne) on a scratch copy of
+    the state with zero velocity, so Coriolis and centrifugal terms are left out. This uses the
+    simulator's own model of the arm; a real arm would use masses identified from the hardware.
+    """
+
+    def __init__(self, model: mujoco.MjModel, gains: PIDGains | None = None):
+        super().__init__(model, gains)
+        self.scratch = mujoco.MjData(model)
+        self.bias = np.zeros(model.nv)
+
+    def gravity_torque(self, data: mujoco.MjData) -> np.ndarray:
+        s = self.scratch
+        s.qpos[:] = data.qpos
+        s.qvel[:] = 0.0
+        mujoco.mj_kinematics(self.model, s)
+        mujoco.mj_comPos(self.model, s)
+        mujoco.mj_rne(self.model, s, 0, self.bias)
+        return self.bias[self.dof_idx]
+
+    def feedforward(self, data: mujoco.MjData) -> np.ndarray:
+        return self.gravity_torque(data)
