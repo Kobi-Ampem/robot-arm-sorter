@@ -8,6 +8,17 @@ import numpy as np
 from .model import ARM_JOINTS, arm_dof_indices, arm_qpos_indices
 
 
+# Joint inertias at the ready pose (kg m^2), from mj_fullM, armature included.
+READY_INERTIA = np.array([0.040, 0.040, 0.019, 0.010])
+
+
+def pd_gains(omega: float, zeta: float, inertia=READY_INERTIA) -> "PIDGains":
+    """Gains giving each joint a natural frequency omega (rad/s) and damping ratio zeta,
+    treating it as a lone inertia: kp = I omega^2, kd = 2 zeta I omega."""
+    inertia = np.asarray(inertia, float)
+    return PIDGains(kp=inertia * omega**2, ki=np.zeros(4), kd=2 * zeta * inertia * omega)
+
+
 @dataclass
 class PIDGains:
     """Per-joint gains, in joint order (base yaw, shoulder, elbow, wrist).
