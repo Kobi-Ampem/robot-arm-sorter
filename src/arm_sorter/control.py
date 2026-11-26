@@ -12,11 +12,15 @@ from .model import ARM_JOINTS, arm_dof_indices, arm_qpos_indices
 READY_INERTIA = np.array([0.040, 0.040, 0.019, 0.010])
 
 
-def pd_gains(omega: float, zeta: float, inertia=READY_INERTIA) -> "PIDGains":
+def pd_gains(omega: float, zeta: float, inertia=READY_INERTIA,
+             integral_time: float | None = None) -> "PIDGains":
     """Gains giving each joint a natural frequency omega (rad/s) and damping ratio zeta,
-    treating it as a lone inertia: kp = I omega^2, kd = 2 zeta I omega."""
+    treating it as a lone inertia: kp = I omega^2, kd = 2 zeta I omega. With an integral time
+    Ti (s), ki = kp / Ti; None means no integral action."""
     inertia = np.asarray(inertia, float)
-    return PIDGains(kp=inertia * omega**2, ki=np.zeros(4), kd=2 * zeta * inertia * omega)
+    kp = inertia * omega**2
+    ki = np.zeros(4) if integral_time is None else kp / integral_time
+    return PIDGains(kp=kp, ki=ki, kd=2 * zeta * inertia * omega)
 
 
 @dataclass
@@ -26,9 +30,11 @@ class PIDGains:
     Defaults aim for a natural frequency near 25 rad/s with critical damping, from the joint
     inertias at the ready pose (about 0.04, 0.04, 0.019 and 0.010 kg m^2):
     kp = I w^2 and kd = 2 I w. The gain sweep in experiments/RESULTS.md checks them.
+    ki = kp / 1.0 s (integral time 1 s) removes the sag under a held tomato, which the gravity
+    model does not include; chosen by the integral sweep in experiments/RESULTS.md.
     """
     kp: np.ndarray = field(default_factory=lambda: np.array([25.0, 25.0, 12.0, 6.4]))
-    ki: np.ndarray = field(default_factory=lambda: np.zeros(4))
+    ki: np.ndarray = field(default_factory=lambda: np.array([25.0, 25.0, 12.0, 6.4]))
     kd: np.ndarray = field(default_factory=lambda: np.array([2.0, 2.0, 0.95, 0.5]))
 
 

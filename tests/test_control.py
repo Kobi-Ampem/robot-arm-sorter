@@ -58,7 +58,10 @@ def test_gravity_compensation_removes_the_sag(model):
 
     q1 = solve_closed_form([0.30, 0.12, 0.05]).q
     traj = joint_move(READY_POSE, q1, model.opt.timestep)
-    plain = track(model, start_at(model, READY_POSE), traj, JointPID(model))
-    comp = track(model, start_at(model, READY_POSE), traj, GravityCompensatedPID(model))
+    from arm_sorter.control import pd_gains
+
+    pd = pd_gains(25, 1.0)  # no integral term, so only gravity compensation removes the sag
+    plain = track(model, start_at(model, READY_POSE), traj, JointPID(model, pd))
+    comp = track(model, start_at(model, READY_POSE), traj, GravityCompensatedPID(model, pd))
     assert comp.final_error().max() < 1e-3
     assert comp.rms_error().max() < plain.rms_error().max() / 3

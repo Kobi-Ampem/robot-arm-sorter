@@ -35,8 +35,8 @@ def pick_and_lift(radius, xy=(0.25, 0.05), release=False):
 def test_tomato_is_held_while_lifted(radius):
     model, data = pick_and_lift(radius)
     assert np.linalg.norm(data.body("tomato0").xpos - data.site("tcp").xpos) < 5e-3
-    # The tomato's weight is not in the gravity model, so the arm sags a few mm under it.
-    assert data.body("tomato0").xpos[2] > radius + 0.10
+    # The tomato's weight is not in the gravity model; integral action removes the sag.
+    assert data.site("tcp").xpos[2] == pytest.approx(radius + 0.12, abs=1e-3)
 
 
 def test_opening_releases_the_tomato():

@@ -157,3 +157,27 @@ is not a reason to pick omega 80.
 **Choice.** All three, now in `assets/arm.xml`. Trade-off: stiffer constraints need the small
 2 ms timestep to stay stable, so the timestep cannot be raised later to speed up the trials
 without re-running this.
+
+## 2026-11-24: integral time sweep (payload sag against overshoot)
+
+- **Script.** `python experiments/integral_sweep.py` (PYTHONPATH=src).
+- **Settings.** Gravity-compensated PID, omega 25 rad/s, zeta 1.0, ki = kp / Ti. Payload: the
+  pick-and-lift of the grasp sweep, sag = target height minus tool height after a 0.5 s hold.
+  No payload: the 20 moves of the PID sweep (seed 0).
+
+| integral time Ti (s) | tool sag, 25 / 30 / 35 mm tomato (mm) | worst tracking error, no payload (mm) | worst joint overshoot (mrad) |
+|---|---|---|---|
+| none | 3.3 / 5.7 / 9.0 | 2.36 | 7.13 |
+| 2.0 | 0.8 / 1.4 / 2.3 | 2.33 | 8.39 |
+| 1.0 | 0.2 / 0.3 / 0.6 | 2.39 | 9.59 |
+| 0.5 | 0.0 / 0.0 / 0.1 | 2.70 | 11.78 |
+| 0.25 | 0.0 / 0.0 / 0.0 | 3.17 | 15.40 |
+| 0.1 | -0.0 / 0.0 / 0.0 | 3.91 | 21.62 |
+
+**Reading.** Without integral action a held tomato pulls the tool 3.3 to 9.0 mm low. Ti = 1 s
+cuts that to 0.6 mm or less; shorter Ti removes it fully but raises tracking error and
+overshoot (21.6 mrad at Ti = 0.1 s against 7.1 without).
+
+**Choice.** Ti = 1.0 s: sag at most 0.6 mm, overshoot 9.6 mrad (about 3 mm at the tool), tracking
+error unchanged at 2.4 mm. Trade-off: a slower integral leaves a little sag in exchange for
+calmer moves.
