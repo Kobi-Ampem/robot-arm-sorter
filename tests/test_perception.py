@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 from arm_sorter import scene as sc
-from arm_sorter.perception import CLEAR_POSE, Camera
+from arm_sorter.perception import CLEAR_POSE, Camera, Thresholds, classify_hue, detect
 
 
 def view(scene):
@@ -12,6 +12,18 @@ def view(scene):
     data.qpos[:4] = CLEAR_POSE
     mujoco.mj_forward(model, data)
     return model, data
+
+
+def match(detections, tomato):
+    return min(detections, key=lambda d: np.linalg.norm(d.xyz[:2] - np.array(tomato.xy)))
+
+
+def test_classify_hue():
+    th = Thresholds()
+    assert classify_hue(2, th) == "ripe" and classify_hue(175, th) == "ripe"
+    assert classify_hue(15, th) == "turning"
+    assert classify_hue(45, th) == "green"
+    assert classify_hue(120, th) is None
 
 
 def test_camera_ray_hits_a_known_point():
@@ -30,6 +42,21 @@ def test_upper_image_is_further_from_the_arm():
     _, right = camera.ray(data, camera.width, camera.height / 2)
     assert up[0] > 0 and right[1] < 0
     camera.close()
+
+
+@pytest.mark.parametrize("seed", range(5))
+def test_finds_every_tomato_with_its_class_and_position(seed):
+    scene = sc.random_scene(seed)
+    model, data = view(scene)
+    camera = Camera(model)
+    found = detect(camera, data)
+    camera.close()
+    assert len(found) == len(scene.tomatoes)
+    for tomato in scene.tomatoes:
+        d = match(found, tomato)
+        assert d.ripeness == tomato.ripeness
+        assert np.linalg.norm(d.xyz[:2] - np.array(tomato.xy)) < 4e-3
+        assert d.radius == pytest.approx(tomato.radius, abs=4e-3)
 
 
 def test_render_size_and_parked_arm_clears_the_pick_area():
