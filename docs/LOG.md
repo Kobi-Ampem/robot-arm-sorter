@@ -76,3 +76,20 @@ Real bugs (symptom, root cause, fix, lesson) and failed ideas (with numbers), ne
   in a row starts again. A new test builds 50 six-tomato scenes.
 - **Lesson.** Any rejection-sampling loop needs a bound or a restart; "it usually finishes" is
   not a property a test suite can rely on.
+
+## 24 Nov 2026: the gripper could not lift a tomato
+
+- **Symptom.** In the first grasp trial the fingers closed on the tomato, but during the lift
+  the tomato slid out of them and stayed on the table, 134 to 143 mm below the tool point, for
+  every size from 25 to 35 mm radius.
+- **Root cause.** Two things, found by printing finger positions, contacts and the tomato's
+  position in the hand frame at each phase. The approach was accurate (tomato centre within
+  0.3 mm of the tool point). But (1) with MuJoCo's default pyramidal friction cone and impratio 1,
+  friction is soft and a constant load makes the contact creep, so the tomato slid down out of
+  the grip as the arm lifted; and (2) the soft equality constraint coupling the fingers gave way
+  under the actuator force, so the driven finger closed 7 to 11 mm further than the other.
+- **Fix.** Elliptic friction cones with impratio 10, a stiffer finger coupling and stiffer finger
+  contacts (sweep and numbers in experiments/RESULTS.md). The tomato now stays within 1.6 to
+  2.8 mm of the tool point through the lift. New tests lift each size and release one.
+- **Lesson.** In MuJoCo, grasping needs the contact model set up for it; the defaults are tuned
+  for locomotion-style contacts, not for holding an object against gravity.

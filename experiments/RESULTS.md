@@ -119,3 +119,41 @@ lowest stiffness that ends within 0.01 mm and tracks within 5 mm (the gripper cl
 tomato by 10 mm). Accepted trade-off: the simulator has no sensor noise, encoder quantisation or
 delay, so stiffer gains look free here. On a real servo they would amplify noise, so the sweep
 is not a reason to pick omega 80.
+
+## 2026-11-24: contact settings for holding a tomato
+
+- **Script.** `python experiments/grasp_contact_sweep.py` (PYTHONPATH=src).
+- **Settings.** One tomato at (0.25, 0.05) m on the table. Ready pose, joint move to 0.08 m above
+  it, Cartesian descent at 0.08 m/s until the tool point is at the tomato's centre, close for
+  0.4 s, lift 0.12 m at 0.08 m/s, hold 0.5 s. Gravity-compensated PID with the default gains.
+  "Held" means the tomato centre ends within 10 mm of the tool point. Each row removes some of
+  the chosen settings from the arm model.
+
+| setting | radius (mm) | held? tomato-to-tool distance after lift (mm) | finger mismatch when closed (mm) |
+|---|---|---|---|
+| MuJoCo defaults | 25 | NO: 135.6 | 7.4 |
+| MuJoCo defaults | 30 | NO: 134.2 | 9.0 |
+| MuJoCo defaults | 35 | NO: 143.3 | 10.6 |
+| elliptic cone, impratio 10 | 25 | yes: 5.1 | 7.3 |
+| elliptic cone, impratio 10 | 30 | yes: 6.5 | 8.3 |
+| elliptic cone, impratio 10 | 35 | yes: 8.3 | 9.5 |
+| + stiff finger coupling | 25 | yes: 3.0 | 0.6 |
+| + stiff finger coupling | 30 | yes: 4.3 | 0.6 |
+| + stiff finger coupling | 35 | yes: 6.0 | 0.7 |
+| + stiff finger contact (chosen) | 25 | yes: 1.6 | 0.6 |
+| + stiff finger contact (chosen) | 30 | yes: 2.2 | 0.6 |
+| + stiff finger contact (chosen) | 35 | yes: 2.8 | 0.7 |
+
+**Reading.**
+- With MuJoCo's defaults (pyramidal friction cone, impratio 1) the tomato slides out of the
+  fingers during the lift and stays on the table, at every size.
+- The elliptic cone with impratio 10 (MuJoCo's documented advice for grasping) holds every size.
+- The soft finger coupling let the two fingers close 7 to 11 mm apart; a stiffer equality
+  constraint (solref 0.004, twice the timestep, the stiffest MuJoCo allows) cuts that to under
+  1 mm and halves the slip.
+- Stiffer finger contacts cut the remaining offset to 1.6 to 2.8 mm (larger tomatoes are
+  heavier and slip more).
+
+**Choice.** All three, now in `assets/arm.xml`. Trade-off: stiffer constraints need the small
+2 ms timestep to stay stable, so the timestep cannot be raised later to speed up the trials
+without re-running this.
