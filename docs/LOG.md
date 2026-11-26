@@ -63,3 +63,16 @@ Real bugs (symptom, root cause, fix, lesson) and failed ideas (with numbers), ne
   0.0014 rad RMS error instead of finishing 0.36 rad short.
 - **Lesson.** After building a model, check `ncon` at rest before tuning anything; a controller
   will happily "work" against a hidden contact, and the symptom looks like a tuning problem.
+
+## 24 Nov 2026: scene generation hung
+
+- **Symptom.** The first run of the scene tests never finished (stopped after 120 s).
+- **Root cause.** Tomato positions were drawn by rejection sampling with no limit. Six tomatoes
+  at 0.09 m spacing in the first pick area (0.14 x 0.24 m) only fit in near-perfect grid
+  layouts, so once a few random positions boxed the rest out, no later draw could succeed and
+  the loop ran forever.
+- **Fix.** Scenes now hold 3 to 5 tomatoes, the pick area grew to 0.15 x 0.28 m (all of it
+  still within 0.35 m of the base, where IK was benchmarked), and a layout that fails 200 draws
+  in a row starts again. A new test builds 50 six-tomato scenes.
+- **Lesson.** Any rejection-sampling loop needs a bound or a restart; "it usually finishes" is
+  not a property a test suite can rely on.
