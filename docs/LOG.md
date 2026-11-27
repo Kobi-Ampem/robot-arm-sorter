@@ -119,3 +119,18 @@ Real bugs (symptom, root cause, fix, lesson) and failed ideas (with numbers), ne
 - **Fix.** Close each renderer straight after its single render; ray casting and detection only
   need the camera's geometry and the saved image. The full sweep then ran in about a minute.
 - **Lesson.** On this 8 GB laptop, treat renderers as scarce: one at a time, closed after use.
+
+## 24 Nov 2026: carrying in one joint move could hit other tomatoes (failed design)
+
+- **Idea.** Lift to 0.17 m, then one joint-space move straight to the drop pose above the bin.
+- **Numbers.** Checked before running it in simulation, over an 8 x 8 grid of pick points, every
+  bin and both extreme sizes: the tool dipped to 0.100 m during the move, so the bottom of a held
+  35 mm tomato reached 0.065 m, below the top of a 35 mm tomato on the tray (0.070 m). The check
+  also showed that 0.17 m was out of reach at the far corners of the pick area (2 of 64 grid
+  points), which would have made the lift fail mid-pick. The first version of the check hid
+  this: it did not test `ok` and silently used zero joint angles.
+- **What replaced it.** Carry height 0.14 m (reachable at all 64 points) and a two-stage carry:
+  turn the base only (height stays constant), then reach out in the arm's plane. Lowest held
+  tomato bottom: 0.105 m, 35 mm above the tallest tomato. A test checks this over the grid.
+- **Lesson.** Joint-space moves are smooth for the joints, not for the tool; check the tool's
+  path whenever there are obstacles. And never ignore a solver's success flag, even in a script.
