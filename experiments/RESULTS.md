@@ -245,3 +245,73 @@ Confusion matrix with the defaults, harsh lighting:
   leave a wide gap.
 
 **Choice.** s_min 100 (middle of the 60 to 140 plateau, margin on both sides) and v_min 20.
+
+## 2026-11-24: 200 randomised episodes (first run)
+
+- **Script.** `python experiments/trials.py --episodes 200` (PYTHONPATH=src, MUJOCO_GL=egl),
+  243 s wall clock.
+- **Settings.** Seeds 5000 to 5199, 3 to 5 tomatoes each, light 0.6 to 1.1. Full pipeline: look
+  from CLEAR_POSE, pick the nearest graded tomato, carry, drop, look again. Bin walls 0.04 m,
+  drop clearance 0.06 m. Scored by where each tomato is after a 1 s settle, not by what the
+  robot believes.
+
+| measure | value |
+|---|---|
+| episodes fully sorted | 188/200 |
+| tomatoes in the correct bin | 779/793 (98.2%) |
+| in a wrong bin | 0 |
+| left on the tray | 0 |
+| elsewhere (fell off) | 14 |
+| pick attempts | 793 (0 more than tomatoes) |
+| failed attempts by reason | none |
+| simulated time per tomato, median (s) | 15.1 |
+| throughput (tomatoes per simulated minute) | 3.9 |
+
+Episodes not fully sorted:
+
+- seed 5041: 4/5 correct, wrong bin 0, on tray 0, elsewhere 1, failures {}
+- seed 5052: 4/5 correct, wrong bin 0, on tray 0, elsewhere 1, failures {}
+- seed 5081: 4/5 correct, wrong bin 0, on tray 0, elsewhere 1, failures {}
+- seed 5115: 4/5 correct, wrong bin 0, on tray 0, elsewhere 1, failures {}
+- seed 5118: 3/4 correct, wrong bin 0, on tray 0, elsewhere 1, failures {}
+- seed 5124: 4/5 correct, wrong bin 0, on tray 0, elsewhere 1, failures {}
+- seed 5135: 4/5 correct, wrong bin 0, on tray 0, elsewhere 1, failures {}
+- seed 5158: 3/4 correct, wrong bin 0, on tray 0, elsewhere 1, failures {}
+- seed 5166: 3/5 correct, wrong bin 0, on tray 0, elsewhere 2, failures {}
+- seed 5168: 2/3 correct, wrong bin 0, on tray 0, elsewhere 1, failures {}
+- seed 5176: 3/5 correct, wrong bin 0, on tray 0, elsewhere 2, failures {}
+- seed 5199: 4/5 correct, wrong bin 0, on tray 0, elsewhere 1, failures {}
+
+**Reading.** No tomato went into a wrong bin and every pick looked successful to the robot, yet
+14 tomatoes (1.8%) ended up off the table. Tracing seed 5041: the tomato was released above the
+ripe bin, landed on a tomato already in it, bounced over the 0.04 m wall at about 0.4 m/s, and
+rolled across the tray and off the edge. A silent failure: the robot has no sensor that sees it.
+Per tomato this meets the 95% target (98.2%); per episode it does not (94%).
+
+## 2026-11-24: drop height, rolling friction and bin walls
+
+- **Script.** `python experiments/bin_drop_sweep.py`, about 10 minutes.
+- **Settings.** The 12 episodes that lost a tomato above, plus 40 that did not (seeds 5000 to
+  5039).
+
+| setting | previously failing episodes now sorted | other episodes sorted | tomatoes lost |
+|---|---|---|---|
+| walls 0.04 m, clearance 0.06 m, rolling friction off | 0/12 | 40/40 | 14 |
+| walls 0.04 m, clearance 0.06 m, rolling friction on | 3/12 | 12/40 | 54 |
+| walls 0.04 m, clearance 0.03 m, rolling friction off | 4/12 | 37/40 | 12 |
+| walls 0.04 m, clearance 0.03 m, rolling friction on | 3/12 | 13/40 | 49 |
+| walls 0.04 m, clearance 0.01 m, rolling friction off | 4/12 | 39/40 | 9 |
+| walls 0.04 m, clearance 0.01 m, rolling friction on | 2/12 | 11/40 | 53 |
+| walls 0.06 m, clearance 0.01 m | 7/12 | 39/40 | 6 |
+| walls 0.07 m, clearance 0.01 m | 12/12 | 40/40 | 0 |
+| walls 0.08 m, clearance 0.01 m | 12/12 | 40/40 | 0 |
+
+**Reading.**
+- Rolling friction (condim 6), meant to stop tomatoes rolling forever, made things far worse:
+  49 to 54 lost. Not investigated further; recorded as a failed idea in docs/LOG.md.
+- A lower drop helps a little (14 lost down to 9); the wall height is what matters. At 0.04 m a
+  tomato landing on another one rolls over the wall.
+- 0.07 m walls with a 0.01 m drop lose nothing on these 52 episodes; 0.06 m still loses 6.
+
+**Choice.** Walls 0.07 m (a shallow produce crate) and drop clearance 0.01 m. 0.08 m works too
+but raises the drop point towards the edge of the arm's reach over the bins.
