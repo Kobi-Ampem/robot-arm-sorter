@@ -181,3 +181,67 @@ overshoot (21.6 mrad at Ti = 0.1 s against 7.1 without).
 **Choice.** Ti = 1.0 s: sag at most 0.6 mm, overshoot 9.6 mrad (about 3 mm at the tool), tracking
 error unchanged at 2.4 mm. Trade-off: a slower integral leaves a little sag in exchange for
 calmer moves.
+
+## 2026-11-24: HSV threshold sweep on 500 random scenes
+
+- **Script.** `python experiments/hsv_sweep.py --scenes 500` and the same with `--light 0.3 1.3`
+  (PYTHONPATH=src, MUJOCO_GL=egl), about 1 minute each.
+- **Settings.** Scenes with seeds 1000 to 1499 (1,987 tomatoes), arm parked at CLEAR_POSE,
+  320 x 240 render. Found = a detection within 15 mm of the tomato. Run after the half-pixel fix
+  (docs/LOG.md); before it, every row had a median position error of 2.1 mm.
+- **Caveat.** The classes are the hue ranges the scene generator draws from (ripe within 8
+  degrees of red, turning 20 to 35, green 75 to 110), so this measures robustness to lighting,
+  shading, size and position, not grading of real tomatoes, whose colours overlap.
+
+**Normal lighting (0.6 to 1.1), turning_max 25** (turning_max 20 and 30 gave identical rows):
+
+| s_min | v_min | turning_max | found | graded correctly | false positives | median / max position error (mm) |
+|---|---|---|---|---|---|---|
+| 60 | 20 | 25 | 1987/1987 | 1987/1987 (100.0%) | 0 | 0.3 / 0.7 |
+| 60 | 40 | 25 | 1987/1987 | 1987/1987 (100.0%) | 0 | 0.3 / 0.7 |
+| 60 | 80 | 25 | 1987/1987 | 1987/1987 (100.0%) | 0 | 0.7 / 3.3 |
+| 100 | 20 | 25 | 1987/1987 | 1987/1987 (100.0%) | 0 | 0.3 / 0.9 |
+| 100 | 40 | 25 | 1987/1987 | 1987/1987 (100.0%) | 0 | 0.3 / 0.9 |
+| 100 | 80 | 25 | 1987/1987 | 1987/1987 (100.0%) | 0 | 0.6 / 3.0 |
+| 140 | 20 | 25 | 1987/1987 | 1987/1987 (100.0%) | 0 | 0.3 / 0.9 |
+| 140 | 40 | 25 | 1987/1987 | 1987/1987 (100.0%) | 0 | 0.3 / 0.9 |
+| 140 | 80 | 25 | 1987/1987 | 1987/1987 (100.0%) | 0 | 0.6 / 3.2 |
+| 180 | 20 | 25 | 1411/1987 | 1411/1987 (71.0%) | 5 | 0.4 / 13.2 |
+| 180 | 40 | 25 | 1411/1987 | 1411/1987 (71.0%) | 5 | 0.4 / 13.2 |
+| 180 | 80 | 25 | 1411/1987 | 1411/1987 (71.0%) | 4 | 0.6 / 13.2 |
+
+**Harsh lighting (0.3 to 1.3), turning_max 25:**
+
+| s_min | v_min | turning_max | found | graded correctly | false positives | median / max position error (mm) |
+|---|---|---|---|---|---|---|
+| 60 | 20 | 25 | 1987/1987 | 1987/1987 (100.0%) | 0 | 0.3 / 0.8 |
+| 60 | 40 | 25 | 1987/1987 | 1987/1987 (100.0%) | 0 | 0.3 / 1.5 |
+| 60 | 80 | 25 | 1987/1987 | 1987/1987 (100.0%) | 0 | 0.8 / 4.8 |
+| 100 | 20 | 25 | 1987/1987 | 1987/1987 (100.0%) | 0 | 0.3 / 0.9 |
+| 100 | 40 | 25 | 1987/1987 | 1987/1987 (100.0%) | 0 | 0.3 / 1.3 |
+| 100 | 80 | 25 | 1987/1987 | 1987/1987 (100.0%) | 0 | 0.7 / 4.8 |
+| 140 | 20 | 25 | 1987/1987 | 1987/1987 (100.0%) | 0 | 0.3 / 1.1 |
+| 140 | 40 | 25 | 1987/1987 | 1987/1987 (100.0%) | 0 | 0.3 / 1.3 |
+| 140 | 80 | 25 | 1987/1987 | 1987/1987 (100.0%) | 0 | 0.7 / 4.7 |
+| 180 | 20 | 25 | 1408/1987 | 1408/1987 (70.9%) | 4 | 0.4 / 14.6 |
+| 180 | 40 | 25 | 1408/1987 | 1408/1987 (70.9%) | 4 | 0.4 / 14.6 |
+| 180 | 80 | 25 | 1408/1987 | 1408/1987 (70.9%) | 3 | 0.7 / 14.0 |
+
+Confusion matrix with the defaults, harsh lighting:
+
+| true \ graded | ripe | turning | green | unknown | missed |
+|---|---|---|---|---|---|
+| ripe | 689 | 0 | 0 | 0 | 0 |
+| turning | 0 | 645 | 0 | 0 | 0 |
+| green | 0 | 0 | 653 | 0 | 0 |
+
+**Reading.**
+- Saturation thresholds from 60 to 140 find and grade every tomato with no false positives in
+  both lighting ranges. At 180, dull tomatoes (generated saturation down to 0.6, about 153 on
+  OpenCV's scale) drop out: 71% found.
+- A brightness floor of 80 cuts the dark edge of each silhouette and worsens the position (worst
+  4.8 mm under harsh light); 20 keeps it (worst 0.9 mm).
+- The turning/green boundary anywhere from 20 to 30 gives the same grading: the generated hues
+  leave a wide gap.
+
+**Choice.** s_min 100 (middle of the 60 to 140 plateau, margin on both sides) and v_min 20.

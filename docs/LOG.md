@@ -108,3 +108,14 @@ Real bugs (symptom, root cause, fix, lesson) and failed ideas (with numbers), ne
   4 mm to 2 mm, and the optical-axis test now uses the corner shared by the four middle pixels.
 - **Lesson.** A constant bias that does not depend on position points at a convention
   (pixel centres, frames, units), not at the model.
+
+## 24 Nov 2026: the threshold sweep ran the GPU out of memory
+
+- **Symptom.** The first run of `experiments/hsv_sweep.py` printed repeated
+  `amdgpu: Failed to allocate a buffer` errors (84,934,656 bytes each) and produced no results
+  after 88 s.
+- **Root cause.** The script kept every scene's `Camera` open so it could score thresholds later,
+  and each MuJoCo renderer holds its own OpenGL context and offscreen buffer: 500 of them.
+- **Fix.** Close each renderer straight after its single render; ray casting and detection only
+  need the camera's geometry and the saved image. The full sweep then ran in about a minute.
+- **Lesson.** On this 8 GB laptop, treat renderers as scarce: one at a time, closed after use.
