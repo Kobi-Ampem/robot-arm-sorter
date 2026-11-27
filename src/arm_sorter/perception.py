@@ -25,7 +25,7 @@ class Thresholds:
     Chosen by the threshold sweep in experiments/RESULTS.md.
     """
     s_min: int = 100
-    v_min: int = 40
+    v_min: int = 20
     ripe_max: int = 8
     ripe_wrap: int = 170
     turning_max: int = 25
