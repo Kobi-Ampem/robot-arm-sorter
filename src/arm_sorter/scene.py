@@ -106,7 +106,12 @@ def tomato_position(model: mujoco.MjModel, data: mujoco.MjData, name: str) -> np
 
 
 def in_bin(xyz, bin_name: str) -> bool:
-    """True if a point lies inside the given bin's walls, below the wall tops."""
+    """True if a tomato centre lies inside the given bin's walls.
+
+    The height limit allows for a tomato resting on another one in the bin (up to one largest
+    tomato diameter above the rim), but not for one still in the air above it.
+    """
     bx, by = BINS[bin_name]
     half = BIN_INNER / 2
-    return abs(xyz[0] - bx) < half and abs(xyz[1] - by) < half and xyz[2] < BIN_WALL_HEIGHT + 0.01
+    return (abs(xyz[0] - bx) < half and abs(xyz[1] - by) < half
+            and xyz[2] < BIN_WALL_HEIGHT + 0.07)

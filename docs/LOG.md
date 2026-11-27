@@ -93,3 +93,44 @@ Real bugs (symptom, root cause, fix, lesson) and failed ideas (with numbers), ne
   2.8 mm of the tool point through the lift. New tests lift each size and release one.
 - **Lesson.** In MuJoCo, grasping needs the contact model set up for it; the defaults are tuned
   for locomotion-style contacts, not for holding an object against gravity.
+
+## 24 Nov 2026: tomato positions were 1.5 mm off in x and y
+
+- **Symptom.** In the first threshold sweep (500 scenes) the median detection position error was
+  2.1 mm for every threshold setting, too uniform to be noise.
+- **Root cause.** Over 100 scenes the mean error was +1.54 mm in x and +1.50 mm in y and did not
+  grow with distance from the camera axis (slopes of 0.003 and 0.002). A constant offset of about
+  half a pixel (one pixel covers about 3 mm of table): OpenCV reports a pixel's centre at its
+  integer index, while the ray code measured from the image corner, so every ray was shifted by
+  half a pixel.
+- **Fix.** `Camera.ray` adds 0.5 to both pixel indices. Median error over the same 100 scenes
+  fell from 2.1 mm to 0.31 mm, worst case from 2.8 mm to 0.75 mm. The test bound tightened from
+  4 mm to 2 mm, and the optical-axis test now uses the corner shared by the four middle pixels.
+- **Lesson.** A constant bias that does not depend on position points at a convention
+  (pixel centres, frames, units), not at the model.
+
+## 24 Nov 2026: the threshold sweep ran the GPU out of memory
+
+- **Symptom.** The first run of `experiments/hsv_sweep.py` printed repeated
+  `amdgpu: Failed to allocate a buffer` errors (84,934,656 bytes each) and produced no results
+  after 88 s.
+- **Root cause.** The script kept every scene's `Camera` open so it could score thresholds later,
+  and each MuJoCo renderer holds its own OpenGL context and offscreen buffer: 500 of them.
+- **Fix.** Close each renderer straight after its single render; ray casting and detection only
+  need the camera's geometry and the saved image. The full sweep then ran in about a minute.
+- **Lesson.** On this 8 GB laptop, treat renderers as scarce: one at a time, closed after use.
+
+## 24 Nov 2026: carrying in one joint move could hit other tomatoes (failed design)
+
+- **Idea.** Lift to 0.17 m, then one joint-space move straight to the drop pose above the bin.
+- **Numbers.** Checked before running it in simulation, over an 8 x 8 grid of pick points, every
+  bin and both extreme sizes: the tool dipped to 0.100 m during the move, so the bottom of a held
+  35 mm tomato reached 0.065 m, below the top of a 35 mm tomato on the tray (0.070 m). The check
+  also showed that 0.17 m was out of reach at the far corners of the pick area (2 of 64 grid
+  points), which would have made the lift fail mid-pick. The first version of the check hid
+  this: it did not test `ok` and silently used zero joint angles.
+- **What replaced it.** Carry height 0.14 m (reachable at all 64 points) and a two-stage carry:
+  turn the base only (height stays constant), then reach out in the arm's plane. Lowest held
+  tomato bottom: 0.105 m, 35 mm above the tallest tomato. A test checks this over the grid.
+- **Lesson.** Joint-space moves are smooth for the joints, not for the tool; check the tool's
+  path whenever there are obstacles. And never ignore a solver's success flag, even in a script.

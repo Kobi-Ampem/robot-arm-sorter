@@ -25,7 +25,7 @@ class Thresholds:
     Chosen by the threshold sweep in experiments/RESULTS.md.
     """
     s_min: int = 100
-    v_min: int = 40
+    v_min: int = 20
     ripe_max: int = 8
     ripe_wrap: int = 170
     turning_max: int = 25
@@ -62,9 +62,13 @@ class Camera:
     def ray(self, data: mujoco.MjData, u: float, v: float) -> tuple[np.ndarray, np.ndarray]:
         """Origin and direction in world coordinates of the ray through pixel (u, v).
 
+        (u, v) are pixel indices as OpenCV reports them: pixel (0, 0) covers the image corner
+        and its centre is at (0.5, 0.5) in image-plane units, hence the + 0.5.
         MuJoCo cameras look along their -z axis with +y up; image rows grow downwards.
         """
-        d_cam = np.array([(u - self.width / 2) / self.f, -(v - self.height / 2) / self.f, -1.0])
+        x = (u + 0.5 - self.width / 2) / self.f
+        y = -(v + 0.5 - self.height / 2) / self.f
+        d_cam = np.array([x, y, -1.0])
         rot = data.cam_xmat[self.cam_id].reshape(3, 3)
         return data.cam_xpos[self.cam_id].copy(), rot @ d_cam
 
