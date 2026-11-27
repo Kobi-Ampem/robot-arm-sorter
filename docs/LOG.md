@@ -93,3 +93,18 @@ Real bugs (symptom, root cause, fix, lesson) and failed ideas (with numbers), ne
   2.8 mm of the tool point through the lift. New tests lift each size and release one.
 - **Lesson.** In MuJoCo, grasping needs the contact model set up for it; the defaults are tuned
   for locomotion-style contacts, not for holding an object against gravity.
+
+## 24 Nov 2026: tomato positions were 1.5 mm off in x and y
+
+- **Symptom.** In the first threshold sweep (500 scenes) the median detection position error was
+  2.1 mm for every threshold setting, too uniform to be noise.
+- **Root cause.** Over 100 scenes the mean error was +1.54 mm in x and +1.50 mm in y and did not
+  grow with distance from the camera axis (slopes of 0.003 and 0.002). A constant offset of about
+  half a pixel (one pixel covers about 3 mm of table): OpenCV reports a pixel's centre at its
+  integer index, while the ray code measured from the image corner, so every ray was shifted by
+  half a pixel.
+- **Fix.** `Camera.ray` adds 0.5 to both pixel indices. Median error over the same 100 scenes
+  fell from 2.1 mm to 0.31 mm, worst case from 2.8 mm to 0.75 mm. The test bound tightened from
+  4 mm to 2 mm, and the optical-axis test now uses the corner shared by the four middle pixels.
+- **Lesson.** A constant bias that does not depend on position points at a convention
+  (pixel centres, frames, units), not at the model.

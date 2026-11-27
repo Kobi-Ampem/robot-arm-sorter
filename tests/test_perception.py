@@ -29,7 +29,8 @@ def test_classify_hue():
 def test_camera_ray_hits_a_known_point():
     model, data = view(sc.Scene([]))
     camera = Camera(model)
-    origin, direction = camera.ray(data, camera.width / 2, camera.height / 2)
+    # The optical axis passes through the corner shared by the four middle pixels.
+    origin, direction = camera.ray(data, camera.width / 2 - 0.5, camera.height / 2 - 0.5)
     t = -origin[2] / direction[2]
     assert (origin + t * direction)[:2] == pytest.approx([0.25, 0.0], abs=1e-9)
     camera.close()
@@ -55,7 +56,7 @@ def test_finds_every_tomato_with_its_class_and_position(seed):
     for tomato in scene.tomatoes:
         d = match(found, tomato)
         assert d.ripeness == tomato.ripeness
-        assert np.linalg.norm(d.xyz[:2] - np.array(tomato.xy)) < 4e-3
+        assert np.linalg.norm(d.xyz[:2] - np.array(tomato.xy)) < 2e-3
         assert d.radius == pytest.approx(tomato.radius, abs=4e-3)
 
 
