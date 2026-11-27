@@ -154,3 +154,54 @@ def pick_and_place(arm: Arm, det: Detection) -> PickOutcome:
     finally:
         out.sim_time = arm.data.time - start
     return out
+
+
+PICK_MARGIN = 0.03   # detections this far outside the pick area still count as on the tray (m)
+MAX_ATTEMPTS = 2     # tries per tomato before giving up on it
+SAME_TOMATO = 0.03   # detections this close to an earlier failed one are the same tomato (m)
+
+
+@dataclass
+class SortResult:
+    outcomes: list[PickOutcome]
+    left_on_tray: list[Detection]
+    sim_time: float
+
+
+def on_tray(det: Detection) -> bool:
+    from .scene import PICK_X, PICK_Y
+
+    x, y = det.xyz[:2]
+    return (PICK_X[0] - PICK_MARGIN <= x <= PICK_X[1] + PICK_MARGIN
+            and PICK_Y[0] - PICK_MARGIN <= y <= PICK_Y[1] + PICK_MARGIN)
+
+
+def sort_all(arm: Arm, camera, max_picks: int = 20) -> SortResult:
+    """Look, pick the nearest graded tomato on the tray, repeat until the tray is clear.
+
+    The arm returns to CLEAR_POSE after every pick, so each look sees the tray unobstructed and
+    picks up anything a failed attempt knocked aside. Tomatoes already in a bin are ignored.
+    """
+    from .perception import detect
+
+    start = arm.data.time
+    outcomes: list[PickOutcome] = []
+    failed: list[np.ndarray] = []  # positions of failed attempts, one entry per attempt
+    if np.linalg.norm(arm.q - CLEAR_POSE) > 1e-3:
+        arm.move_joints(CLEAR_POSE)
+    remaining: list[Detection] = []
+    for _ in range(max_picks):
+        remaining = [d for d in detect(camera, arm.data) if on_tray(d)]
+        candidates = [d for d in remaining if d.ripeness is not None and
+                      sum(np.linalg.norm(d.xyz[:2] - f) < SAME_TOMATO for f in failed) < MAX_ATTEMPTS]
+        if not candidates:
+            break
+        det = min(candidates, key=lambda d: np.linalg.norm(d.xyz[:2]))
+        out = pick_and_place(arm, det)
+        outcomes.append(out)
+        if not out.success:
+            failed.append(det.xyz[:2].copy())
+            arm.move_joints(CLEAR_POSE)
+    else:
+        remaining = [d for d in detect(camera, arm.data) if on_tray(d)]
+    return SortResult(outcomes, remaining, arm.data.time - start)

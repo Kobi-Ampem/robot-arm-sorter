@@ -60,3 +60,18 @@ def test_every_lift_and_carry_is_reachable_and_clears_the_tray():
                         low = min(tcp_position(p)[2] for p in joint_move(q, waypoint, 0.002).q[::5])
                         assert low - radius > tallest_top + 0.02
                         q = waypoint
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2])
+def test_sort_all_clears_the_tray_into_the_right_bins(seed):
+    from arm_sorter.task import sort_all
+
+    scene = sc.random_scene(seed)
+    model, data, arm = setup(scene)
+    camera = Camera(model)
+    result = sort_all(arm, camera)
+    camera.close()
+    arm.wait(1.0)
+    assert result.left_on_tray == []
+    for t in scene.tomatoes:
+        assert sc.in_bin(data.body(t.name).xpos, t.ripeness), (t.name, t.ripeness, data.body(t.name).xpos)
