@@ -134,3 +134,18 @@ Real bugs (symptom, root cause, fix, lesson) and failed ideas (with numbers), ne
   tomato bottom: 0.105 m, 35 mm above the tallest tomato. A test checks this over the grid.
 - **Lesson.** Joint-space moves are smooth for the joints, not for the tool; check the tool's
   path whenever there are obstacles. And never ignore a solver's success flag, even in a script.
+
+## 24 Nov 2026: tomatoes bounced out of the bins (silent failure)
+
+- **Symptom.** In the first 200-episode run, 14 of 793 tomatoes (1.8%, in 12 episodes) ended up
+  off the table, although every pick and release looked successful to the robot.
+- **Root cause.** Recording one tomato's path (seed 5041): it was released 0.06 m above the rim
+  of the ripe bin, landed on a tomato already in the bin, bounced over the 0.04 m wall at about
+  0.4 m/s and rolled across the tray and off the edge. Low walls plus a drop onto round fruit.
+- **Failed idea.** Adding rolling friction (condim 6) so tomatoes stop rolling: 49 to 54 tomatoes
+  lost on the 52 test episodes instead of 14. Not pursued.
+- **Fix.** Bin walls 0.07 m and release 0.01 m above the rim instead of 0.06 m: 0 lost on the
+  same 52 episodes (sweep in experiments/RESULTS.md).
+- **Lesson.** Score against ground truth, not against the robot's own belief: this failure was
+  invisible to every check the robot can make. A real cell would want a check on the bin (the
+  camera sees two of the three) or a chute instead of a drop.
