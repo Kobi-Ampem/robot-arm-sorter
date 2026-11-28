@@ -17,7 +17,7 @@ from .trajectory import cartesian_line, joint_move
 APPROACH_HEIGHT = 0.08  # start the straight descent this far above the grasp point (m)
 CARRY_HEIGHT = 0.14     # tool height while carrying; the highest reachable over the whole pick area
                         # with margin (0.17 failed at its far corners, see docs/LOG.md)
-DROP_CLEARANCE = 0.06   # gap between the bottom of a held tomato and the bin rim at release
+DROP_CLEARANCE = 0.01   # gap between the bottom of a held tomato and the bin rim at release
 EMPTY_GRIP = 0.008      # fingers closing past this opening (m) means nothing was grasped
 LINE_SPEED = 0.08       # m/s for straight moves near the tomato
 

@@ -39,9 +39,14 @@ def where(xyz, true_class: str) -> str:
     return "elsewhere"
 
 
-def run_episode(seed: int, light_range=(0.6, 1.1), on_step=None) -> Episode:
+def run_episode(seed: int, light_range=(0.6, 1.1), on_step=None, on_model=None) -> Episode:
+    """One sorting episode. `on_step(data)` runs after every physics step; `on_model(model)`, if
+    given, is called once the scene is built and returns the on_step to use (for recorders that
+    need the model)."""
     scene = sc.random_scene(seed, light_range=light_range)
     model = sc.build(scene)
+    if on_model is not None:
+        on_step = on_model(model)
     data = mujoco.MjData(model)
     data.qpos[:4] = CLEAR_POSE
     mujoco.mj_forward(model, data)

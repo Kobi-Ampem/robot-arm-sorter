@@ -16,7 +16,7 @@ HUE_RANGES = {"ripe": (-8.0, 8.0), "turning": (20.0, 35.0), "green": (75.0, 110.
 # Bin centres on the table (x, y), chosen to be reachable with a top-down drop.
 BINS = {"ripe": (0.02, 0.30), "turning": (0.02, -0.30), "green": (-0.24, 0.06)}
 BIN_INNER = 0.12  # inner width of a bin (m)
-BIN_WALL_HEIGHT = 0.04
+BIN_WALL_HEIGHT = 0.07  # a shallow crate; 0.04 let tomatoes bounce out (docs/LOG.md)
 
 # Pick area on the table, in front of the arm.
 PICK_X = (0.17, 0.32)
