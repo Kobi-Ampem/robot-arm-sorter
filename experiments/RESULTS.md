@@ -315,3 +315,60 @@ Per tomato this meets the 95% target (98.2%); per episode it does not (94%).
 
 **Choice.** Walls 0.07 m (a shallow produce crate) and drop clearance 0.01 m. 0.08 m works too
 but raises the drop point towards the edge of the arm's reach over the bins.
+
+## 2026-11-24: 200 episodes after the bin fix, and 200 held-out episodes
+
+- **Script.** `python experiments/trials.py --episodes 200` and
+  `python experiments/trials.py --episodes 200 --seed0 6000`, about 4 minutes each.
+- **Settings.** As the first run, with bin walls 0.07 m and drop clearance 0.01 m.
+
+**Same seeds as the first run (5000 to 5199).** Not independent: the fix was chosen on 52 of
+these episodes.
+
+| measure | value |
+|---|---|
+| episodes fully sorted | 199/200 |
+| tomatoes in the correct bin | 792/793 (99.9%) |
+| in a wrong bin | 0 |
+| left on the tray | 0 |
+| elsewhere (fell off) | 1 |
+| pick attempts | 793 (0 more than tomatoes) |
+| failed attempts by reason | none |
+| simulated time per tomato, median (s) | 15.1 |
+| throughput (tomatoes per simulated minute) | 3.9 |
+
+Episodes not fully sorted:
+
+- seed 5056: 3/4 correct, wrong bin 0, on tray 0, elsewhere 1, failures {}
+
+**Held-out seeds (6000 to 6199), never used for any choice.** This is the headline result.
+
+| measure | value |
+|---|---|
+| episodes fully sorted | 197/200 |
+| tomatoes in the correct bin | 781/784 (99.6%) |
+| in a wrong bin | 0 |
+| left on the tray | 1 |
+| elsewhere (fell off) | 2 |
+| pick attempts | 784 (0 more than tomatoes) |
+| failed attempts by reason | none |
+| simulated time per tomato, median (s) | 15.2 |
+| throughput (tomatoes per simulated minute) | 3.9 |
+
+Episodes not fully sorted:
+
+- seed 6068: 4/5 correct, wrong bin 0, on tray 0, elsewhere 1, failures {}
+- seed 6195: 3/4 correct, wrong bin 0, on tray 1, elsewhere 0, failures {}
+- seed 6197: 4/5 correct, wrong bin 0, on tray 0, elsewhere 1, failures {}
+
+**Reading.**
+- Held out: 99.6% of tomatoes in the correct bin and 98.5% of episodes fully sorted, against
+  targets of 95%. No tomato was ever put in a wrong bin and no pick failed.
+- The three losses are the same mechanism as before, at a lower rate: a tomato dropped onto
+  others in a crowded bin rolls out. Seed 6195: the third turning tomato into the turning bin
+  rolled over the wall and back onto the tray after the robot's last look, so the robot never
+  knew. Next step if this mattered: look at the bin after each drop (the camera sees the ripe and
+  turning bins) or aim the drop at the emptiest part of the bin.
+- Throughput is 3.9 tomatoes per simulated minute, about 15 s per tomato. Slow for a real cell:
+  speeds were set for smooth, accurate motion (1.5 rad/s joints, 0.08 m/s near the tomato) and
+  the arm returns to the parked pose after every pick so the camera has a clear view. Not tuned.
