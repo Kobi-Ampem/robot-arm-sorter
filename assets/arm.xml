@@ -30,6 +30,8 @@
     <geom name="table" type="box" size="0.45 0.45 0.02" pos="0.15 0 -0.02" material="table"/>
     <!-- Looks straight down at the pick area: image up is +x, image right is -y. -->
     <camera name="overhead" pos="0.25 0 0.8" xyaxes="0 -1 0 1 0 0" fovy="50"/>
+    <!-- Angled view of the whole cell, for the demo video only. -->
+    <camera name="demo" pos="0.72 -0.62 0.58" xyaxes="0.7071 0.7071 0 -0.3658 0.3658 0.8558" fovy="45"/>
 
     <body name="base">
       <geom name="base" type="cylinder" size="0.06 0.01" pos="0 0 0.01" rgba="0.3 0.3 0.32 1"/>

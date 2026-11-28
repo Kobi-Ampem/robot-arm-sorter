@@ -12,6 +12,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+viz = ["imageio>=2.30", "imageio-ffmpeg>=0.5", "pillow>=10"]
 dev = ["pytest>=8"]
 
 [tool.pytest.ini_options]
